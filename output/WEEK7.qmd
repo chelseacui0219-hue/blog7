@@ -1,0 +1,91 @@
+---
+title: "Blog7: Interactive Visualization of the College Wage Premium"
+date: 2026-10-30
+author: "Yuzhuo Cui"
+output: html_document
+---
+
+## Introduction
+
+In my previous analysis (Blog 3), I examined the **College Wage Premium** — the percentage gap in median earnings between bachelor's degree holders and high school graduates. Using static line charts, I found that the aggregate premium followed a V-shaped trend: rising until 2015, falling during the pandemic, and partially recovering.
+
+However, a static chart of multiple age groups had a major limitation: **when four lines overlap, cross, and spike simultaneously, the human eye cannot track them.** In Blog 3, I could only conclude that "older workers face more volatility," but I couldn't pinpoint exactly *when* and *how much* each group spiked.
+
+This is where **interactive data visualization** becomes indispensable. In this post, I use the `plotly` library in R to rebuild the same dataset. By comparing the interactive chart to the static chart in Blog 3, I will show how interactivity adds substantive value, revealing macroeconomic shocks that were hidden in plain sight.
+
+## The Data and Methodology
+
+I reconstructed the dataset from raw IPUMS Current Population Survey (CPS) microdata, covering U.S. workers aged 25–64 from 2002 to 2025.
+
+1. **Cleaning**: Filtered for positive wage income, restricted education levels to high school (`EDUC = 73`) and bachelor's degrees (`EDUC = 111`).
+2. **Weighting**: Used the `ASECWT` sampling weight to ensure the results represent the U.S. population.
+3. **Calculation**: Computed the weighted median income for each year and age group, and calculated the premium:
+   \[
+   \text{Premium} = \left( \frac{\text{Bachelor's Median}}{\text{High School Median}} - 1 \right) \times 100
+   \]
+
+Here is the core R logic used to build the visualization:
+
+<pre><code class="language-r">
+library(plotly)
+
+p <- age_premium |>
+  plot_ly(
+    x = ~YEAR,
+    y = ~pct_premium,
+    color = ~age_group,
+    type = 'scatter',
+    mode = 'lines+markers',
+    hovertemplate = paste(
+      "<b>Year:</b> %{x}<br>",
+      "<b>Age Group:</b> %{color}<br>",
+      "<b>Premium:</b> %{y:.1f}%<extra></extra>"
+    )
+  ) |>
+  layout(
+    title = "The College Wage Premium by Age Group (2002-2025)",
+    xaxis = list(title = "Year"),
+    yaxis = list(title = "College Premium (%)"),
+    hovermode = "x unified"
+  )
+
+htmlwidgets::saveWidget(p, "output/interactive_premium.html")
+</code></pre>
+
+## The Interactive Visualization
+
+Below is the interactive time series. *(Hover to see exact values, click the legend to isolate groups, and drag to zoom.)*
+<iframe src="interactive_premium.html" width="100%" height="600px" frameborder="0"></iframe>
+
+## Why Interactivity Matters: Static vs. Interactive
+
+In Blog 3, I used a static `ggplot`. Looking at that static image, the four lines crossed so frequently that it was impossible to track the exact value of one group without losing sight of the others. 
+
+The Plotly interactive chart fundamentally changes how we read the story:
+
+### 1. Zooming into Economic Shocks
+In the static chart, the lines for 2007–2010 and 2019–2022 looked like chaotic zig-zags. With Plotly's **zoom** feature, we can isolate these periods. By zooming into 2022, we can clearly see that the 45-54 and 55-64 age groups both spiked to over 80%, while the 25-34 group stayed flat around 66%. This specific divergence was hidden in the static graph.
+
+### 2. Isolating Specific Cohorts
+In Blog 3, I concluded that "older workers face more volatility." But with the interactive legend, we can test this. Clicking on `25-34` hides the other lines, revealing a sharp plunge to 60% during the 2007 financial crisis. Clicking on `55-64` shows a completely different trajectory: a slow decline until 2019, followed by a massive pandemic spike. **The interactive tool proves that the "volatility" was not a generic trend, but a series of distinct, age-specific shocks.**
+
+### 3. Unified Hovering
+The `hovermode = "x unified"` setting allows a reader to place their mouse on 2015 and instantly see all four premiums: 25-34 (74.5%), 35-44 (76.5%), 45-54 (76.5%), and 55-64 (66.7%). In a static chart, comparing four points visually requires tracing invisible horizontal lines with your eyes. Plotly removes this cognitive burden.
+
+## Key Findings (Revisiting Blog 3)
+
+By utilizing the interactive features, we uncover a story that was obscured in the static charts of Blog 3:
+
+1. **The aggregate trend masks severe internal volatility.** While Blog 3 showed a smooth V-shape for the overall economy, the interactive chart reveals that each age group experienced entirely different cycles.
+2. **The 2022 spike was driven by older workers.** The interactive hover reveals that in 2022, the 45-54 and 55-64 groups jumped to 82.5%, while younger groups remained stable. This suggests pandemic-era labor shortages disproportionately boosted the relative premium of older, experienced workers.
+3. **Frequent crossovers mean there is no "permanent" winning cohort.** The lines for 45-54 and 55-64 cross multiple times. The relative advantage of a degree fluctuates wildly depending on macroeconomic timing, not just age.
+
+## Conclusion
+
+Interactive visualization is not just a cosmetic upgrade to static charts. As demonstrated by comparing this Plotly graph to the static charts in Blog 3, interactivity transforms the reader's relationship with the data. It shifts the analysis from "passive viewing" to "active exploration."
+
+For messy, overlapping macroeconomic data, a static chart forces the reader to accept the author's narrative. An interactive chart allows the reader to find their own. By zooming into 2022, isolating the 2007 crash, or hovering to compare exact values, readers can uncover the age-specific shocks that make the U.S. labor market so complex.
+
+---
+
+*Data source: IPUMS CPS, Annual Social and Economic Supplement, 2002–2025. Weighted using ASECWT. Earnings in 2010 dollars.*
